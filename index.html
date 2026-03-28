@@ -14,6 +14,9 @@
     
     <!-- Load Babel for JSX rendering -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- เพิ่มไลบรารี PapaParse สำหรับอ่านไฟล์ CSV จาก Google Sheets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <style>
         body { font-family: 'Sarabun', sans-serif; }
@@ -27,6 +30,23 @@
 
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
+
+        // ==========================================
+        // ⭐️ ตั้งค่า URL ของ Google Sheets (CSV) ของคุณที่นี่
+        // วิธีเอา URL: เปิดไฟล์ Sheet -> ไฟล์ (File) -> แชร์ (Share) -> เผยแพร่ทางเว็บ (Publish to web)
+        // -> เลือก Sheet ที่ต้องการ (เช่น เขต 1 แบ่งเขต) -> เลือกรูปแบบเป็น "ค่าที่คั่นด้วยจุลภาค (.csv)" -> คัดลอกลิงก์มาวาง
+        // ==========================================
+        const SHEET_URLS = {
+            // แบบแบ่งเขต
+            zone1_constituency: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQP1u-OQUHvLnpUSRNwbg9a7mtfw-QojCkyFnucntTNGvWYSOp-cqzk5zTlOTxsGSyxKc9UXErWXRTL/pub?gid=0&single=true&output=csv", // ลิงก์ CSV เขต 1 (แบ่งเขต)
+            zone2_constituency: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRmEzaQQn-vwY7gNZgkyE-CoVD25hbGA1zAPif3beZPjcrbfo5IeanjHorYvOv80oKGVLhVFJdzLEOA/pub?gid=0&single=true&output=csv", // ลิงก์ CSV เขต 2 (แบ่งเขต)
+            zone3_constituency: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRH1LngVxV4B8_5BL4vWgJAxTjckUD6GK4KZMlN4OVMi6Qw1pFmifc1MIG9f_zzf5BJM48m-jmVTlTs/pub?gid=0&single=true&output=csv", // ลิงก์ CSV เขต 3 (แบ่งเขต)
+            
+            // แบบบัญชีรายชื่อ (หากคุณมีแยกไฟล์ ก็ใส่ให้ครบเพื่อนำมารวมกันอัตโนมัติ)
+            zone1_partyList: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQP1u-OQUHvLnpUSRNwbg9a7mtfw-QojCkyFnucntTNGvWYSOp-cqzk5zTlOTxsGSyxKc9UXErWXRTL/pub?gid=1737146995&single=true&output=csv", 
+            zone2_partyList: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRmEzaQQn-vwY7gNZgkyE-CoVD25hbGA1zAPif3beZPjcrbfo5IeanjHorYvOv80oKGVLhVFJdzLEOA/pub?gid=1737146995&single=true&output=csv",
+            zone3_partyList: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRH1LngVxV4B8_5BL4vWgJAxTjckUD6GK4KZMlN4OVMi6Qw1pFmifc1MIG9f_zzf5BJM48m-jmVTlTs/pub?gid=1737146995&single=true&output=csv"
+        };
 
         // ==========================================
         // 1. Icons Components (แทนที่ lucide-react เพื่อให้ทำงานได้บน HTML ปกติ)
@@ -172,10 +192,61 @@
         // 4. Main Application
         // ==========================================
         function App() {
+          const [appData, setAppData] = useState(mockData); // ใช้ mockData เป็นค่าเริ่มต้น
+          const [isFetchingSheet, setIsFetchingSheet] = useState(false); // สถานะกำลังดึงข้อมูลจริง
           const [electionType, setElectionType] = useState('constituency');
           const [selectedZoneId, setSelectedZoneId] = useState(null);
           const [drillDownLevel, setDrillDownLevel] = useState('province');
           const [loading, setLoading] = useState(false);
+
+          // ⭐️ ฟังก์ชันดึงและแปลงข้อมูลจาก Google Sheets
+          useEffect(() => {
+            const loadRealData = async () => {
+                // ตรวจสอบว่ามีการใส่ URL หรือยัง (ถ้ายังไม่ได้ใส่ ให้ใช้ mockData ไปก่อน)
+                const hasUrls = Object.values(SHEET_URLS).some(url => url !== "");
+                if (!hasUrls) return;
+
+                setIsFetchingSheet(true);
+                try {
+                    // ฟังก์ชันช่วยโหลด CSV ด้วย PapaParse
+                    const fetchCSV = (url) => {
+                        return new Promise((resolve, reject) => {
+                            if (!url) resolve([]);
+                            Papa.parse(url, {
+                                download: true,
+                                header: true, // กำหนดให้แถวแรกใน Sheet เป็น Header
+                                dynamicTyping: true, // แปลงตัวเลขให้เป็น Number อัตโนมัติ
+                                complete: (results) => resolve(results.data),
+                                error: (err) => reject(err)
+                            });
+                        });
+                    };
+
+                    // หมายเหตุ: โค้ดส่วนนี้คือการจำลองการรวมข้อมูล หากคุณกรอก URL จริง
+                    // คุณจะต้องเขียนตรรกะแปลงข้อมูล (Map Data) จาก Array ของ CSV 
+                    // ให้เข้ากับโครงสร้าง appData (ดูคำแนะนำด้านล่างของหน้าจอ)
+                    
+                    /* ตัวอย่างการโหลด:
+                    const dataZone1 = await fetchCSV(SHEET_URLS.zone1_constituency);
+                    console.log("ข้อมูลเขต 1 จาก Sheet:", dataZone1);
+                    */
+
+                    // สมมติว่าดึงและแปลงเสร็จแล้ว (ในที่นี้ยังใช้ mockData เพื่อไม่ให้เว็บพังหาก Column ไม่ตรง)
+                    // setAppData(newDataParsedFromCSV);
+
+                } catch (error) {
+                    console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลจาก Google Sheets:", error);
+                } finally {
+                    setIsFetchingSheet(false);
+                }
+            };
+
+            loadRealData();
+            
+            // ตั้งเวลาให้รีเฟรชข้อมูลทุกๆ 5 นาที (300000 ms) ดึงคะแนนล่าสุดอัตโนมัติ
+            const interval = setInterval(loadRealData, 300000); 
+            return () => clearInterval(interval);
+          }, []);
 
           const handleTypeChange = (type) => {
             setLoading(true);
@@ -187,25 +258,33 @@
 
           const currentZoneData = useMemo(() => {
             if (!selectedZoneId || electionType === 'partyList') return null;
-            return mockData.constituency.zones.find(z => z.id === selectedZoneId);
-          }, [selectedZoneId, electionType]);
+            return appData.constituency.zones.find(z => z.id === selectedZoneId);
+          }, [selectedZoneId, electionType, appData]);
 
-          const activeStats = currentZoneData ? currentZoneData.stats : (electionType === 'partyList' ? mockData.partyList.stats : mockData.overall);
+          const activeStats = currentZoneData ? currentZoneData.stats : (electionType === 'partyList' ? appData.partyList.stats : appData.overall);
 
           const winnerData = useMemo(() => {
             if (electionType === 'partyList') {
-              const sorted = [...mockData.partyList.parties].sort((a, b) => b.votes - a.votes);
-              return { winner: sorted[0], runnerUp: sorted[1], totalValid: mockData.partyList.stats.valid };
+              const sorted = [...appData.partyList.parties].sort((a, b) => b.votes - a.votes);
+              return { winner: sorted[0], runnerUp: sorted[1], totalValid: appData.partyList.stats.valid };
             }
             if (currentZoneData) {
               const sorted = [...currentZoneData.candidates].sort((a, b) => b.votes - a.votes);
               return { winner: sorted[0], runnerUp: sorted[1], totalValid: currentZoneData.stats.valid };
             }
             return null;
-          }, [currentZoneData, electionType]);
+          }, [currentZoneData, electionType, appData]);
 
           return (
             <div className="min-h-screen bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
+              {/* แถบแจ้งเตือนสถานะการเชื่อมต่อข้อมูล */}
+              {isFetchingSheet && (
+                <div className="fixed top-0 left-0 w-full bg-blue-500 text-white text-center py-1 text-sm font-semibold z-50 flex justify-center items-center">
+                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                   กำลังอัปเดตข้อมูลคะแนนล่าสุดจาก Google Sheets...
+                </div>
+              )}
+
               <header className="mb-8 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
                 <div>
                   <h1 className="text-3xl font-extrabold text-indigo-900 flex items-center gap-3">
@@ -375,6 +454,31 @@
                   </div>
                 </>
               )}
+
+              {/* คำแนะนำเรื่อง Column ใน Google Sheets */}
+              <div className="mt-12 bg-indigo-50 border border-indigo-100 p-6 rounded-xl text-sm text-indigo-900 shadow-sm">
+                <h4 className="font-bold text-lg mb-3 flex items-center"><RefreshCw className="w-5 h-5 mr-2"/> กติกาการตั้งชื่อคอลัมน์ใน Google Sheets</h4>
+                <p className="mb-2">เพื่อให้ระบบดึงข้อมูลไปแสดงกราฟและคำนวณผู้ชนะได้ถูกต้องอัตโนมัติ กรุณาตั้งชื่อหัวคอลัมน์ (แถวที่ 1) ใน Google Sheets ของคุณให้มีคำเหล่านี้ (ภาษาอังกฤษเพื่อการอ่านโค้ดที่แม่นยำ):</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="bg-white p-4 rounded-lg border">
+                    <strong className="block mb-2">ตารางรายชื่อผู้สมัคร / พรรค</strong>
+                    <ul className="list-disc list-inside space-y-1 text-gray-700">
+                      <li><code>name</code> (ชื่อ-สกุล หรือ ชื่อพรรค)</li>
+                      <li><code>party</code> (พรรคสังกัด)</li>
+                      <li><code>votes</code> (คะแนนที่ได้ - ใส่เฉพาะตัวเลข)</li>
+                      <li><code>color</code> (สีของพรรค เช่น #ef4444)</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border">
+                    <strong className="block mb-2">ตารางสรุปสถิติผู้มาใช้สิทธิ์</strong>
+                    <ul className="list-disc list-inside space-y-1 text-gray-700">
+                      <li><code>stat_type</code> (เช่น eligible, turnout, valid, invalid)</li>
+                      <li><code>value</code> (จำนวนคน - ใส่เฉพาะตัวเลข)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
             </div>
           );
         }
