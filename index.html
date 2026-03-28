@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานผลการเลือกตั้ง อุตรดิตถ์ 2569</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Load Babel for JSX rendering -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // ==========================================
+        // 1. Icons Components (แทนที่ lucide-react เพื่อให้ทำงานได้บน HTML ปกติ)
+        // ==========================================
+        const Users = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+        const CheckCircle = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+        const XCircle = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+        const FileWarning = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="12" x2="12" y2="16"></line><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>;
+        const MapIcon = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
+        const ChevronRight = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"></polyline></svg>;
+        const Trophy = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>;
+        const BarChart3 = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>;
+        const RefreshCw = ({ className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>;
+
+        // ==========================================
+        // 2. ข้อมูลจำลอง (Mock Data)
+        // ==========================================
+        const mockData = {
+          overall: { eligible: 365420, turnout: 274065, valid: 258000, invalid: 12500, noVote: 3565 },
+          constituency: {
+            zones: [
+              {
+                id: 1, name: "เขตเลือกตั้งที่ 1", description: "อ.เมืองอุตรดิตถ์, อ.ลับแล, อ.ตรอน",
+                stats: { eligible: 125000, turnout: 95000, valid: 90000, invalid: 4000, noVote: 1000 },
+                candidates: [
+                  { name: "นาย สมศักดิ์ รักชาติ", party: "พรรคพัฒนาไทย", votes: 45000, color: "#ef4444" },
+                  { name: "นางสาว มาลี ดีใจ", party: "พรรคก้าวหน้า", votes: 32000, color: "#f97316" },
+                  { name: "นาย สมชาย ใจดี", party: "พรรคพลังใหม่", votes: 13000, color: "#3b82f6" }
+                ],
+                amphoes: [
+                  { id: "a1", name: "อ.เมืองอุตรดิตถ์", winner: "พรรคพัฒนาไทย", votes: 25000 },
+                  { id: "a2", name: "อ.ลับแล", winner: "พรรคพัฒนาไทย", votes: 12000 },
+                  { id: "a3", name: "อ.ตรอน", winner: "พรรคก้าวหน้า", votes: 15000 }
+                ]
+              },
+              {
+                id: 2, name: "เขตเลือกตั้งที่ 2", description: "อ.ทองแสนขัน, อ.น้ำปาด, อ.ฟากท่า, อ.บ้านโคก",
+                stats: { eligible: 110420, turnout: 82000, valid: 78000, invalid: 3000, noVote: 1000 },
+                candidates: [
+                  { name: "นาย บุญเรือง ท้องถิ่น", party: "พรรคพลังใหม่", votes: 40000, color: "#3b82f6" },
+                  { name: "นาย อำนาจ เกรียงไกร", party: "พรรคพัฒนาไทย", votes: 35000, color: "#ef4444" },
+                  { name: "นาง วนิดา ชาติภูมิ", party: "พรรคก้าวหน้า", votes: 3000, color: "#f97316" }
+                ],
+                amphoes: [
+                  { id: "a4", name: "อ.ทองแสนขัน", winner: "พรรคพลังใหม่", votes: 12000 },
+                  { id: "a5", name: "อ.น้ำปาด", winner: "พรรคพลังใหม่", votes: 18000 },
+                  { id: "a6", name: "อ.ฟากท่า", winner: "พรรคพัฒนาไทย", votes: 10000 },
+                  { id: "a7", name: "อ.บ้านโคก", winner: "พรรคพัฒนาไทย", votes: 8000 }
+                ]
+              },
+              {
+                id: 3, name: "เขตเลือกตั้งที่ 3", description: "อ.พิชัย, อ.ท่าปลา",
+                stats: { eligible: 130000, turnout: 97065, valid: 90000, invalid: 5500, noVote: 1565 },
+                candidates: [
+                  { name: "นาย สุรพล รักษ์น้ำ", party: "พรรคก้าวหน้า", votes: 48000, color: "#f97316" },
+                  { name: "นาย ชัยวัฒน์ มั่นคง", party: "พรรคพัฒนาไทย", votes: 30000, color: "#ef4444" },
+                  { name: "นาย ประยุทธ์ สุขใจ", party: "พรรคพลังใหม่", votes: 12000, color: "#3b82f6" }
+                ],
+                amphoes: [
+                  { id: "a8", name: "อ.พิชัย", winner: "พรรคก้าวหน้า", votes: 28000 },
+                  { id: "a9", name: "อ.ท่าปลา", winner: "พรรคก้าวหน้า", votes: 20000 }
+                ]
+              }
+            ]
+          },
+          partyList: {
+            stats: { eligible: 365420, turnout: 274065, valid: 265000, invalid: 7000, noVote: 2065 },
+            parties: [
+              { name: "พรรคก้าวหน้า", votes: 115000, color: "#f97316" },
+              { name: "พรรคพัฒนาไทย", votes: 95000, color: "#ef4444" },
+              { name: "พรรคพลังใหม่", votes: 55000, color: "#3b82f6" }
+            ]
+          }
+        };
+
+        // ==========================================
+        // 3. Components ย่อย
+        // ==========================================
+        const StatCard = ({ title, value, total, icon: Icon, colorClass, subtitle }) => {
+          const percentage = total ? ((value / total) * 100).toFixed(2) : null;
+          return (
+            <div className={`bg-white rounded-xl shadow-sm p-4 border-l-4 ${colorClass}`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-gray-500 text-sm font-medium">{title}</p>
+                  <h3 className="text-2xl font-bold mt-1 text-gray-800">{value.toLocaleString()}</h3>
+                  {percentage && (
+                    <p className="text-sm mt-1 font-semibold text-gray-600">
+                      คิดเป็น {percentage}%
+                    </p>
+                  )}
+                  {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+                </div>
+                <div className="p-2 rounded-lg bg-gray-50">
+                  <Icon className="w-6 h-6 text-gray-600" />
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const ProvinceMap = ({ activeZone, onZoneClick }) => {
+          return (
+            <div className="relative w-full aspect-square max-w-md mx-auto">
+              <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+                {/* เขต 3 */}
+                <path 
+                  d="M 10,40 L 40,10 L 80,10 L 90,40 L 50,50 Z" 
+                  fill={activeZone === 3 ? "#818cf8" : "#e0e7ff"}
+                  stroke="#4f46e5" strokeWidth="1"
+                  className="cursor-pointer hover:fill-indigo-300 transition-colors"
+                  onClick={() => onZoneClick(3)}
+                />
+                <text x="50" y="30" fontSize="4" textAnchor="middle" fill="#312e81" className="pointer-events-none font-bold">เขต 3 (ท่าปลา, พิชัย)</text>
+
+                {/* เขต 1 */}
+                <path 
+                  d="M 10,40 L 50,50 L 60,80 L 30,90 L 10,70 Z" 
+                  fill={activeZone === 1 ? "#818cf8" : "#e0e7ff"}
+                  stroke="#4f46e5" strokeWidth="1"
+                  className="cursor-pointer hover:fill-indigo-300 transition-colors"
+                  onClick={() => onZoneClick(1)}
+                />
+                 <text x="30" y="65" fontSize="4" textAnchor="middle" fill="#312e81" className="pointer-events-none font-bold">เขต 1</text>
+                 <text x="30" y="70" fontSize="3" textAnchor="middle" fill="#312e81" className="pointer-events-none">เมือง, ลับแล</text>
+
+                {/* เขต 2 */}
+                <path 
+                  d="M 50,50 L 90,40 L 95,70 L 60,80 Z" 
+                  fill={activeZone === 2 ? "#818cf8" : "#e0e7ff"}
+                  stroke="#4f46e5" strokeWidth="1"
+                  className="cursor-pointer hover:fill-indigo-300 transition-colors"
+                  onClick={() => onZoneClick(2)}
+                />
+                <text x="75" y="60" fontSize="4" textAnchor="middle" fill="#312e81" className="pointer-events-none font-bold">เขต 2</text>
+                <text x="75" y="65" fontSize="3" textAnchor="middle" fill="#312e81" className="pointer-events-none">น้ำปาด, ฟากท่า</text>
+              </svg>
+            </div>
+          );
+        };
+
+        // ==========================================
+        // 4. Main Application
+        // ==========================================
+        function App() {
+          const [electionType, setElectionType] = useState('constituency');
+          const [selectedZoneId, setSelectedZoneId] = useState(null);
+          const [drillDownLevel, setDrillDownLevel] = useState('province');
+          const [loading, setLoading] = useState(false);
+
+          const handleTypeChange = (type) => {
+            setLoading(true);
+            setElectionType(type);
+            setSelectedZoneId(null);
+            setDrillDownLevel('province');
+            setTimeout(() => setLoading(false), 500);
+          };
+
+          const currentZoneData = useMemo(() => {
+            if (!selectedZoneId || electionType === 'partyList') return null;
+            return mockData.constituency.zones.find(z => z.id === selectedZoneId);
+          }, [selectedZoneId, electionType]);
+
+          const activeStats = currentZoneData ? currentZoneData.stats : (electionType === 'partyList' ? mockData.partyList.stats : mockData.overall);
+
+          const winnerData = useMemo(() => {
+            if (electionType === 'partyList') {
+              const sorted = [...mockData.partyList.parties].sort((a, b) => b.votes - a.votes);
+              return { winner: sorted[0], runnerUp: sorted[1], totalValid: mockData.partyList.stats.valid };
+            }
+            if (currentZoneData) {
+              const sorted = [...currentZoneData.candidates].sort((a, b) => b.votes - a.votes);
+              return { winner: sorted[0], runnerUp: sorted[1], totalValid: currentZoneData.stats.valid };
+            }
+            return null;
+          }, [currentZoneData, electionType]);
+
+          return (
+            <div className="min-h-screen bg-gray-50 text-gray-800 font-sans p-4 md:p-8">
+              <header className="mb-8 flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
+                <div>
+                  <h1 className="text-3xl font-extrabold text-indigo-900 flex items-center gap-3">
+                    <Trophy className="text-yellow-500 w-8 h-8" />
+                    รายงานผลการเลือกตั้ง ส.ส. ปี 2569
+                  </h1>
+                  <p className="text-gray-500 mt-1 text-lg">จังหวัดอุตรดิตถ์ (อย่างไม่เป็นทางการ)</p>
+                </div>
+                <div className="mt-4 md:mt-0 flex bg-gray-100 p-1 rounded-lg">
+                  <button onClick={() => handleTypeChange('constituency')} className={`px-6 py-2 rounded-md font-semibold transition-all ${electionType === 'constituency' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'}`}>
+                    แบบแบ่งเขต
+                  </button>
+                  <button onClick={() => handleTypeChange('partyList')} className={`px-6 py-2 rounded-md font-semibold transition-all ${electionType === 'partyList' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'}`}>
+                    แบบบัญชีรายชื่อ
+                  </button>
+                </div>
+              </header>
+
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <RefreshCw className="w-10 h-10 text-indigo-500 animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 flex items-center text-sm font-medium text-gray-600 bg-white inline-flex px-4 py-2 rounded-lg shadow-sm">
+                     <MapIcon className="w-4 h-4 mr-2" />
+                     <span className="cursor-pointer hover:text-indigo-600" onClick={() => { setSelectedZoneId(null); setDrillDownLevel('province'); }}>
+                       ภาพรวมจังหวัดอุตรดิตถ์
+                     </span>
+                     {currentZoneData && (
+                       <>
+                         <ChevronRight className="w-4 h-4 mx-1" />
+                         <span className="text-indigo-700">{currentZoneData.name}</span>
+                       </>
+                     )}
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                    <StatCard title="ผู้มีสิทธิ์ทั้งหมด" value={activeStats.eligible} icon={Users} colorClass="border-blue-500" />
+                    <StatCard title="ผู้มาแสดงสิทธิ์" value={activeStats.turnout} total={activeStats.eligible} icon={CheckCircle} colorClass="border-indigo-500" />
+                    <StatCard title="บัตรดี" value={activeStats.valid} total={activeStats.turnout} icon={CheckCircle} colorClass="border-green-500" />
+                    <StatCard title="บัตรเสีย" value={activeStats.invalid} total={activeStats.turnout} icon={FileWarning} colorClass="border-red-500" />
+                    <StatCard title="ไม่เลือกใคร" value={activeStats.noVote} total={activeStats.turnout} icon={XCircle} colorClass="border-gray-500" />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {electionType === 'constituency' && (
+                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                          <MapIcon className="w-5 h-5 text-indigo-500"/> 
+                          พื้นที่เลือกตั้ง (เจาะลึก)
+                        </h2>
+                        {drillDownLevel === 'province' && (
+                          <>
+                            <p className="text-sm text-gray-500 mb-4">คลิกที่เขตบนแผนที่เพื่อดูระดับอำเภอ/ตำบล</p>
+                            <ProvinceMap activeZone={selectedZoneId} onZoneClick={(id) => { setSelectedZoneId(id); setDrillDownLevel('amphoe'); }} />
+                          </>
+                        )}
+                        {drillDownLevel === 'amphoe' && currentZoneData && (
+                          <div className="animate-fade-in">
+                             <button onClick={() => setDrillDownLevel('province')} className="mb-4 text-sm text-indigo-600 hover:underline flex items-center">
+                               ← กลับไปดูระดับจังหวัด
+                             </button>
+                             <h3 className="font-bold text-lg mb-3">{currentZoneData.name} ({currentZoneData.description})</h3>
+                             <div className="space-y-3">
+                               {currentZoneData.amphoes.map(amp => (
+                                 <div key={amp.id} className="p-4 border border-gray-100 rounded-xl hover:shadow-md transition-shadow cursor-pointer bg-gray-50">
+                                    <div className="flex justify-between items-center">
+                                       <span className="font-semibold text-gray-800">{amp.name}</span>
+                                       <span className="text-sm bg-white px-2 py-1 rounded-md text-gray-600 border">คลิกเพื่อดูระดับตำบล</span>
+                                    </div>
+                                    <div className="mt-2 text-sm">
+                                      พรรคที่นำ: <span className="font-bold">{amp.winner}</span> ({amp.votes.toLocaleString()} คะแนน)
+                                    </div>
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className={`lg:col-span-${electionType === 'constituency' ? '7' : '12'} space-y-6`}>
+                      {(winnerData || electionType === 'partyList') && (
+                        <div className="bg-gradient-to-br from-indigo-900 to-blue-900 rounded-2xl p-6 shadow-lg text-white relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Trophy className="w-48 h-48" />
+                          </div>
+                          <h2 className="text-xl font-bold mb-2 text-indigo-100">
+                            {electionType === 'partyList' ? 'พรรคการเมืองที่ได้คะแนนสูงสุด' : (currentZoneData ? `ผู้ชนะ ${currentZoneData.name}` : 'ผู้ชนะภาพรวม (เลือกเขตเพื่อดูรายบุคคล)')}
+                          </h2>
+                          {winnerData ? (
+                            <div className="relative z-10 mt-4">
+                              <div className="flex flex-col md:flex-row items-start md:items-end justify-between border-b border-indigo-700/50 pb-6 mb-6">
+                                <div>
+                                  <p className="text-4xl font-extrabold mb-1">
+                                    {winnerData.winner.name} 
+                                    {electionType === 'constituency' && <span className="text-lg font-normal ml-3 bg-white/20 px-3 py-1 rounded-full">{winnerData.winner.party}</span>}
+                                  </p>
+                                  <p className="text-indigo-200 mt-2 text-lg">
+                                    คะแนนรวม: <span className="font-bold text-white text-2xl">{winnerData.winner.votes.toLocaleString()}</span> เสียง
+                                  </p>
+                                </div>
+                                <div className="mt-4 md:mt-0 text-right bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+                                  <p className="text-sm text-indigo-200">สัดส่วนคะแนน</p>
+                                  <p className="text-3xl font-bold text-yellow-400">
+                                    {((winnerData.winner.votes / winnerData.totalValid) * 100).toFixed(1)}%
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 text-indigo-100">
+                                <div className="flex-1">
+                                  <p className="text-sm mb-1">อันดับ 2: {winnerData.runnerUp.name} {electionType === 'constituency' && `(${winnerData.runnerUp.party})`}</p>
+                                  <p className="font-semibold">{winnerData.runnerUp.votes.toLocaleString()} คะแนน</p>
+                                </div>
+                                <div className="w-px h-10 bg-indigo-700/50"></div>
+                                <div className="flex-1">
+                                  <p className="text-sm mb-1 text-green-300">ทิ้งห่างคู่แข่ง</p>
+                                  <p className="font-bold text-xl text-green-400">
+                                    +{(winnerData.winner.votes - winnerData.runnerUp.votes).toLocaleString()} คะแนน
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="py-8 text-center text-indigo-200">
+                              กรุณาคลิกเลือกเขตบนแผนที่ เพื่อดูรายชื่อผู้ชนะ
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(currentZoneData || electionType === 'partyList') && (
+                        <div className="bg-white p-6 rounded-2xl shadow-sm">
+                          <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-indigo-500"/> 
+                            ผลคะแนนเรียงตามลำดับ
+                          </h2>
+                          <div className="space-y-6">
+                            {(electionType === 'partyList' ? mockData.partyList.parties : currentZoneData.candidates)
+                              .sort((a, b) => b.votes - a.votes)
+                              .map((item, index) => {
+                                const total = electionType === 'partyList' ? mockData.partyList.stats.valid : currentZoneData.stats.valid;
+                                const percent = ((item.votes / total) * 100).toFixed(1);
+                                return (
+                                  <div key={index} className="relative">
+                                    <div className="flex justify-between items-end mb-2">
+                                      <div>
+                                        <span className="font-bold text-lg text-gray-800 mr-2">{index + 1}. {item.name}</span>
+                                        {electionType === 'constituency' && <span className="text-sm text-gray-500">({item.party})</span>}
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="font-bold text-gray-800">{item.votes.toLocaleString()}</span>
+                                        <span className="text-sm text-gray-500 ml-1">({percent}%)</span>
+                                      </div>
+                                    </div>
+                                    <div className="w-full bg-gray-100 rounded-full h-3">
+                                      <div className="h-3 rounded-full transition-all duration-1000" style={{ width: `${percent}%`, backgroundColor: item.color || '#4f46e5' }}></div>
+                                    </div>
+                                  </div>
+                                );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        }
+
+        // ==========================================
+        // 5. Initialize Application
+        // ==========================================
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
